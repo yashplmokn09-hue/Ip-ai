@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>IP-AIv1</title>
+<style>
+:root {
+  --bg:       #0c0c0e;
+  --surface:  #16161a;
+  --card:     #1e1e24;
+  --border:   #2a2a35;
+  --accent:   #7c6ff7;
+  --accent2:  #4f46e5;
+  --text:     #e8e8f0;
+  --muted:    #7070a0;
+  --user-bg:  #1a1830;
+  --user-br:  #3d3880;
+  --ai-bg:    #16161a;
+  --tool-bg:  #0f1f18;
+  --tool-br:  #1a4a32;
+  --tool-txt: #4ade80;
+  --r:        12px;
+  --font:     -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  display: flex; flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Header */
+header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 12px; color: #fff;
+  letter-spacing: -0.5px; flex-shrink: 0;
+}
+.hname { font-weight: 700; font-size: 15px; }
+.htag  { font-size: 10px; color: var(--muted); background: var(--border);
+         padding: 2px 7px; border-radius: 20px; }
+.hright { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #555; flex-shrink: 0; }
+.dot.on { background: #4ade80; box-shadow: 0 0 6px #4ade8088; }
+.params { font-size: 11px; color: var(--muted); }
+
+/* API bar */
+.apibar {
+  display: flex; gap: 8px; padding: 8px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.apibar input {
+  flex: 1; background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 12px;
+  padding: 7px 11px; outline: none;
+}
+.apibar input:focus { border-color: var(--accent); }
+.apibar button {
+  background: var(--accent2); border: none; border-radius: 8px;
+  color: #fff; font-size: 12px; padding: 7px 14px; cursor: pointer;
+  font-weight: 600; transition: background 0.15s;
+}
+.apibar button:hover { background: var(--accent); }
+
+/* Toggle row */
+.togglerow {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; color: var(--muted);
+  flex-shrink: 0;
+}
+.toggle-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 20px; padding: 3px 10px;
+  cursor: pointer; color: var(--muted); font-size: 11px;
+  transition: all 0.15s;
+}
+.toggle-btn.on { background: var(--tool-bg); border-color: var(--tool-br); color: var(--tool-txt); }
+.toggle-btn .icon { font-size: 13px; }
+
+/* Messages */
+#msgs {
+  flex: 1; overflow-y: auto;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Welcome */
+.welcome {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; flex: 1; gap: 10px; color: var(--muted);
+  text-align: center; padding: 40px 24px;
+}
+.welcome .wlogo {
+  width: 64px; height: 64px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 22px; color: #fff; margin-bottom: 4px;
+}
+.welcome h2 { color: var(--text); font-size: 22px; font-weight: 700; }
+.welcome p  { font-size: 13px; max-width: 260px; line-height: 1.6; }
+.welcome .caps {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  margin-top: 4px;
+}
+.welcome .cap {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  background: var(--card); border: 1px solid var(--border); color: var(--muted);
+}
+.welcome .cap.hi { border-color: var(--tool-br); color: var(--tool-txt); background: var(--tool-bg); }
+
+/* Message bubbles */
+.msg { max-width: 88%; display: flex; flex-direction: column; gap: 3px; }
+.msg.user { align-self: flex-end; }
+.msg.assistant, .msg.tool-call { align-self: flex-start; }
+.msg-label { font-size: 10px; color: var(--muted); font-weight: 700;
+             text-transform: uppercase; letter-spacing: 0.5px; }
+.msg.user .msg-label { text-align: right; }
+.bubble {
+  padding: 10px 14px; border-radius: var(--r);
+  font-size: 14px; line-height: 1.65; word-break: break-word;
+  white-space: pre-wrap;
+}
+.msg.user      .bubble { background: var(--user-bg); border: 1px solid var(--user-br); }
+.msg.assistant .bubble { background: var(--ai-bg);   border: 1px solid var(--border); }
+.msg.tool-call .bubble {
+  background: var(--tool-bg); border: 1px solid var(--tool-br);
+  font-size: 12px; color: var(--tool-txt); font-family: monospace;
+}
+
+/* Typing */
+.typing-bubble {
+  background: var(--ai-bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 16px;
+  display: flex; gap: 5px; align-items: center;
+}
+.typing-bubble span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted); animation: bob 1.2s infinite;
+}
+.typing-bubble span:nth-child(2) { animation-delay: .2s; }
+.typing-bubble span:nth-child(3) { animation-delay: .4s; }
+@keyframes bob {
+  0%,60%,100% { transform: translateY(0); opacity:.5; }
+  30%          { transform: translateY(-5px); opacity:1; }
+}
+
+/* Input area */
+.inputarea {
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex; gap: 10px; align-items: flex-end;
+  flex-shrink: 0;
+}
+#inp {
+  flex: 1; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font: 14px/1.5 var(--font);
+  padding: 10px 12px; resize: none; outline: none;
+  min-height: 40px; max-height: 130px;
+}
+#inp:focus { border-color: var(--accent); }
+#inp::placeholder { color: var(--muted); }
+#send {
+  width: 40px; height: 40px; flex-shrink: 0;
+  background: var(--accent); border: none; border-radius: 10px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+#send:hover    { background: #9d96fa; }
+#send:disabled { background: var(--border); cursor: not-allowed; }
+#send svg { width: 18px; height: 18px; fill: #fff; }
+
+/* Streaming cursor */
+.cursor { display: inline-block; width: 2px; height: 14px;
+          background: var(--accent); margin-left: 2px;
+          animation: blink 1s infinite; vertical-align: text-bottom; }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+
+/* Error */
+.err {
+  color: #f87171; font-size: 12px; padding: 6px 12px;
+  background: #200f0f; border: 1px solid #5a2020;
+  border-radius: 8px; align-self: flex-start; max-width: 88%;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">IP</div>
+  <span class="hname">IP-AIv1</span>
+  <span class="htag">v1.0</span>
+  <div class="hright">
+    <span class="params" id="paramsTxt"></span>
+    <div class="dot" id="dot"></div>
+  </div>
+</header>
+
+<div class="apibar">
+  <input id="apiUrl" type="url" placeholder="API URL — e.g. https://your-api.railway.app" />
+  <button onclick="connect()">Connect</button>
+</div>
+
+<div class="togglerow">
+  <span>Features:</span>
+  <div class="toggle-btn on" id="toggleSearch" onclick="toggleFeat('search')">
+    <span class="icon">🌐</span> Web search
+  </div>
+  <div class="toggle-btn on" id="toggleStream" onclick="toggleFeat('stream')">
+    <span class="icon">⚡</span> Streaming
+  </div>
+</div>
+
+<div id="msgs">
+  <div class="welcome" id="welcome">
+    <div class="wlogo">IP</div>
+    <h2>IP-AIv1</h2>
+    <p>Your own AI model — real-time internet access, streaming responses, tool calling.</p>
+    <div class="caps">
+      <span class="cap hi">🌐 Web search</span>
+      <span class="cap hi">📚 Wikipedia</span>
+      <span class="cap hi">⚡ Streaming</span>
+      <span class="cap">🔧 Tool calling</span>
+      <span class="cap">💬 Multi-turn chat</span>
+    </div>
+  </div>
+</div>
+
+<div class="inputarea">
+  <textarea id="inp" rows="1" placeholder="Message IP-AIv1..."></textarea>
+  <button id="send" onclick="send()">
+    <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+  </button>
+</div>
+
+<script>
+let API    = localStorage.getItem("ip_ai_url") || "";
+let busy   = false;
+let useSearch = true;
+let useStream = true;
+let history   = [];   // [{role, content}]
+
+const msgsEl    = document.getElementById("msgs");
+const inpEl     = document.getElementById("inp");
+const sendBtn   = document.getElementById("send");
+const dot       = document.getElementById("dot");
+const paramsTxt = document.getElementById("paramsTxt");
+const welcome   = document.getElementById("welcome");
+
+if (API) { document.getElementById("apiUrl").value = API; ping(); }
+
+function toggleFeat(f) {
+  if (f === "search") {
+    useSearch = !useSearch;
+    document.getElementById("toggleSearch").className = "toggle-btn" + (useSearch ? " on" : "");
+  } else {
+    useStream = !useStream;
+    document.getElementById("toggleStream").className = "toggle-btn" + (useStream ? " on" : "");
+  }
+}
+
+async function connect() {
+  API = document.getElementById("apiUrl").value.trim().replace(/\/$/, "");
+  localStorage.setItem("ip_ai_url", API);
+  await ping();
+}
+
+async function ping() {
+  try {
+    const r    = await fetch(API + "/");
+    const data = await r.json();
+    if (data.status === "ready") {
+      dot.className = "dot on";
+      paramsTxt.textContent = data.parameters
+        ? (data.parameters / 1e6).toFixed(1) + "M params"
+        : "";
+    } else {
+      dot.className = "dot";
+      paramsTxt.textContent = "no model loaded";
+    }
+  } catch { dot.className = "dot"; paramsTxt.textContent = ""; }
+}
+
+function hideWelcome() {
+  if (welcome) welcome.style.display = "none";
+}
+
+function addMsg(role, text, extra = "") {
+  hideWelcome();
+  const wrap  = document.createElement("div");
+  wrap.className = "msg " + role;
+  const label = document.createElement("div");
+  label.className = "msg-label";
+  label.textContent = role === "user" ? "You" : role === "tool-call" ? "🌐 Tool" : "IP-AIv1";
+  const bub = document.createElement("div");
+  bub.className = "bubble";
+  bub.textContent = text;
+  wrap.appendChild(label);
+  wrap.appendChild(bub);
+  msgsEl.appendChild(wrap);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+  return bub;
+}
+
+function addErr(t) {
+  hideWelcome();
+  const d = document.createElement("div");
+  d.className = "err"; d.textContent = "⚠ " + t;
+  msgsEl.appendChild(d);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function addTyping() {
+  const wrap = document.createElement("div");
+  wrap.className = "msg assistant"; wrap.id = "typing";
+  const label = document.createElement("div");
+  label.className = "msg-label"; label.textContent = "IP-AIv1";
+  const bub = document.createElement("div");
+  bub.className = "typing-bubble";
+  bub.innerHTML = "<span></span><span></span><span></span>";
+  wrap.appendChild(label); wrap.appendChild(bub);
+  msgsEl.appendChild(wrap);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+  return wrap;
+}
+
+async function send() {
+  if (busy) return;
+  const text = inpEl.value.trim();
+  if (!text) return;
+  if (!API) { addErr("Enter the API URL and click Connect first."); return; }
+
+  addMsg("user", text);
+  history.push({ role: "user", content: text });
+  inpEl.value = ""; inpEl.style.height = "auto";
+  busy = true; sendBtn.disabled = true;
+
+  if (useStream) {
+    await sendStream(text);
+  } else {
+    await sendBlocking(text);
+  }
+
+  busy = false; sendBtn.disabled = false; inpEl.focus();
+}
+
+async function sendBlocking(text) {
+  const typing = addTyping();
+  try {
+    const res = await fetch(API + "/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "ip-ai-v1",
+        messages: history,
+        max_tokens: 512,
+        temperature: 0.8,
+        stream: false,
+        use_tools: useSearch,
+      }),
+    });
+    typing.remove();
+    if (!res.ok) { const e = await res.json().catch(()=>{}); addErr(e?.detail || `Error ${res.status}`); return; }
+    const data  = await res.json();
+    const reply = data.choices?.[0]?.message?.content || "(empty)";
+    addMsg("assistant", reply);
+    history.push({ role: "assistant", content: reply });
+  } catch (e) {
+    typing.remove();
+    addErr("Could not reach the API.");
+  }
+}
+
+async function sendStream(text) {
+  hideWelcome();
+  // Create streaming bubble
+  const wrap  = document.createElement("div");
+  wrap.className = "msg assistant";
+  const label = document.createElement("div");
+  label.className = "msg-label"; label.textContent = "IP-AIv1";
+  const bub = document.createElement("div");
+  bub.className = "bubble";
+  const cursor = document.createElement("span");
+  cursor.className = "cursor";
+  bub.appendChild(cursor);
+  wrap.appendChild(label); wrap.appendChild(bub);
+  msgsEl.appendChild(wrap);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  let full = "";
+  try {
+    const res = await fetch(API + "/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "ip-ai-v1",
+        messages: history,
+        max_tokens: 512,
+        temperature: 0.8,
+        stream: true,
+        use_tools: useSearch,
+      }),
+    });
+
+    if (!res.ok) {
+      cursor.remove();
+      bub.textContent = "Error " + res.status;
+      return;
+    }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value).split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") break;
+        try {
+          const chunk  = JSON.parse(payload);
+          const token  = chunk.choices?.[0]?.delta?.content || "";
+          full += token;
+          bub.textContent = full;
+          bub.appendChild(cursor);
+          msgsEl.scrollTop = msgsEl.scrollHeight;
+        } catch {}
+      }
+    }
+  } catch {
+    bub.textContent = full || "Could not reach the API.";
+  }
+  cursor.remove();
+  if (full) history.push({ role: "assistant", content: full });
+}
+
+// Auto-resize textarea
+inpEl.addEventListener("input", () => {
+  inpEl.style.height = "auto";
+  inpEl.style.height = Math.min(inpEl.scrollHeight, 130) + "px";
+});
+inpEl.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+});
+</script>
+</body>
+</html>
